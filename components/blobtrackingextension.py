@@ -41,11 +41,11 @@ class blobtrackingextension:
         self.debug_mode = enabled
         debug(f"[BLOB DEBUG] Debug mode: {'ON' if self.debug_mode else 'OFF'}")
     
-    def SendOSC(self, address, blob_id, u, v):
-        """Send OSC message"""
+    def SendOSC(self, address, blob_id, u, v, width, height):
+        """Send OSC message with numeric values"""
         if self.OscOut:
-            self.OscOut.sendOSC(address, [blob_id, u, v])
-            self.Debug(f"[OSC] {address} {blob_id} {u:.7f} {v:.7f}")
+            self.OscOut.sendOSC(address, [blob_id, u, v, width, height])
+            self.Debug(f"[OSC] {address} id:{blob_id} u:{u:.4f} v:{v:.4f} w:{width:.4f} h:{height:.4f}")
         else:
             self.Debug(f"[OSC] ERROR - OSC Out not found!")
     
