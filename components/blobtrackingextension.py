@@ -1,13 +1,11 @@
 from dataclasses import dataclass
-from TDStoreTools import StorageManager
-import TDFunctions as TDF
 
 @dataclass
 class Blob:
     id: int
     u: float
     v: float
-    state: str  # 'new', 'active', 'lost', 'expired'
+    state: str
 
 class blobtrackingextension:
     """
@@ -15,15 +13,20 @@ class blobtrackingextension:
     """
     def __init__(self, ownerComp):
         self.ownerComp = ownerComp
-        self.active_blobs = tdu.Dependency({})  # id: Blob
-        self.debug_mode = False  # Toggle this on/off
+        self.active_blobs = tdu.Dependency({})
+        self.debug_mode = True
         
     @property
     def ActiveBlobs(self):
         return self.active_blobs.val
+    
     @property
     def OscOut(self):
-        return op('oscout1')  
+        return op('oscout1')
+    
+    @property
+    def Blob(self):
+        return Blob
     
     def Debug(self, message):
         if self.debug_mode:
@@ -42,69 +45,18 @@ class blobtrackingextension:
         """Send OSC message"""
         if self.OscOut:
             self.OscOut.sendOSC(address, [blob_id, u, v])
-            self.Debug(f"[BLOB OSC] {address} {blob_id} {u:.7f} {v:.7f}")
+            self.Debug(f"[OSC] {address} {blob_id} {u:.7f} {v:.7f}")
         else:
-            self.Debug(f"[BLOB OSC] ERROR - OSC Out not found!")
+            self.Debug(f"[OSC] ERROR - OSC Out not found!")
     
-    def OnBlobTrack(self, blobTrackTop, blobs):
-        for blob in blobs:
-            blob_id = blob.id
-            u = blob.u
-            v = blob.v
-            
-            # Send move message
-            self.SendOSC('/touch/move', blob_id, u, v)
-            
-            # Update stored blob
-            if blob_id in self.active_blobs.val:
-                self.active_blobs.val[blob_id].u = u
-                self.active_blobs.val[blob_id].v = v
-                self.active_blobs.modified()
-            else:
-                # Shouldn't happen, but safety check
-                self.active_blobs.val[blob_id] = Blob(blob_id, u, v, 'active')
-                self.active_blobs.modified()
-    
-    def OnBlobStateChange(self, blobTrackTop, blobs):
-        self.Debug("[BLOB STATE] " + "=" * 60)
-        self.Debug(f"[BLOB STATE] Processing {len(blobs)} blob(s)")
-        
-        for blob in blobs:
-            blob_id = blob.id
-            u = blob.u
-            v = blob.v
-            state = blob.state
-            
-            self.Debug(f"[BLOB STATE] Blob {blob_id} - State: {state} - Tracked: {blob_id in self.active_blobs.val}")
-            
-            if state == 'new' or state == 'revived':
-                # BEGIN
-                self.Debug(f"[BLOB STATE]   -> BEGIN Blob {blob_id} at ({u:.4f}, {v:.4f})")
-                self.SendOSC('/touch/begin', blob_id, u, v)
-                self.active_blobs.val[blob_id] = Blob(blob_id, u, v, state)
-                self.active_blobs.modified()
-                
-            elif state == 'lost' or state == 'expired':
-                # END
-                if blob_id in self.active_blobs.val:
-                    stored_blob = self.active_blobs.val[blob_id]
-                    self.Debug(f"[BLOB STATE]   -> END Blob {blob_id} ({state}) at ({stored_blob.u:.4f}, {stored_blob.v:.4f})")
-                    self.SendOSC('/touch/end', blob_id, stored_blob.u, stored_blob.v)
-                    del self.active_blobs.val[blob_id]
-                    self.active_blobs.modified()
-                else:
-                    self.Debug(f"[BLOB STATE]   -> ERROR: Blob {blob_id} {state} but not tracked!")
-        
-        # Summary
-        self.Debug(f"[BLOB STATE] Active blobs: {len(self.active_blobs.val)}")
-        if self.active_blobs.val:
-            self.Debug(f"[BLOB STATE]   IDs: {list(self.active_blobs.val.keys())}")
-        self.Debug("[BLOB STATE] " + "=" * 60)
+    def ClearAllBlobs(self):
+        """Manually clear all tracked blobs"""
+        self.Debug(f"[CLEAR] Clearing {len(self.active_blobs.val)} blobs")
+        self.active_blobs.val = {}
+        self.active_blobs.modified()
     
     def GetActiveBlobs(self):
-        """Return list of currently active blobs"""
-        return list(self.active_blobs.val)
+        return list(self.active_blobs.val.values())
     
     def GetActiveBlobCount(self):
-        """Return count of active blobs"""
         return len(self.active_blobs.val)
