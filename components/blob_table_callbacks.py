@@ -1,7 +1,6 @@
 def onTableChange(dat):
     """
-    ULTIMATE TABLE CHANGE HANDLER
-    Processes blob tracking table with full begin/move/end lifecycle
+    Process blob tracking table with middle zone detection
     """
     ext = parent.blobtrack.extensions[0]
     
@@ -20,6 +19,7 @@ def onTableChange(dat):
     
     # Process all rows
     for i in range(1, dat.numRows):
+        debug(i)
         try:
             blob_id = int(dat[i, 'id'].val)
             u = float(dat[i, 'u'].val)
